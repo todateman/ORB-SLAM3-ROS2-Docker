@@ -1,0 +1,27 @@
+﻿# Logitech C270 単眼カメラ用 ROSパラメータ
+# image_topic_name は v4l2_camera_node が配信するトピック名
+
+ORB_SLAM3_MONO_ROS2:
+  ros__parameters:
+    # SLAM関連
+    robot_base_frame: base_footprint
+    global_frame: map
+    odom_frame: odom
+
+    # カメラトピック（v4l2_camera_nodeのデフォルト）
+    image_topic_name: /image_raw
+
+    # ベースフレームからカメラへのオフセット（必要に応じて調整）
+    robot_x: 0.0
+    robot_y: 0.0
+    robot_z: 0.0
+    robot_qx: 0.0
+    robot_qy: 0.0
+    robot_qz: 0.0
+    robot_qw: 1.0
+
+    visualization: true
+    odometry_mode: false
+    publish_tf: true
+    map_data_publish_frequency: 1000
+    do_loop_closing: false
