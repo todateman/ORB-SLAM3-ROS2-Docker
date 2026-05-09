@@ -1,18 +1,18 @@
 ﻿# ORB-SLAM3 単眼SLAM セットアップ手順 (Logitech C270 + NVIDIA GPU + Docker)
 
-## 概要
+## 1. 概要
 
 Logitech Webcam C270 を使って、Docker コンテナ内で ORB-SLAM3 の単眼SLAMを動作させる手順です。
 
-## 前提条件
+## 2. 前提条件
 
-### ハードウェア
+### 2.1. ハードウェア
 
 - NVIDIA GPU（本手順では RTX 5060 Ti で動作確認）
 - Logitech Webcam C270（USB: `046d:0825`、`/dev/video0` として認識）
 - Ubuntu ホスト OS
 
-### ソフトウェア
+### 2.2. ソフトウェア
 
 | ソフトウェア | バージョン |
 | ------------ | ---------- |
@@ -22,7 +22,7 @@ Logitech Webcam C270 を使って、Docker コンテナ内で ORB-SLAM3 の単�
 | NVIDIA Container Toolkit | インストール済み |
 | Docker Compose | v2 以上 |
 
-### NVIDIA Container Toolkit の確認
+### 2.3. NVIDIA Container Toolkit の確認
 
 ```bash
 # nvidia ランタイムが存在することを確認
@@ -32,9 +32,9 @@ docker info | grep -i runtime
 
 ---
 
-## セットアップ手順
+## 3. セットアップ手順
 
-### 1. リポジトリのクローン
+### 3.1. リポジトリのクローン
 
 ```bash
 git clone https://github.com/suchetanrs/ORB-SLAM3-ROS2-Docker.git
@@ -42,7 +42,7 @@ cd ORB-SLAM3-ROS2-Docker
 git submodule update --init --recursive --remote
 ```
 
-### 2. X11 アクセス許可（ホスト側）
+### 3.2. X11 アクセス許可（ホスト側）
 
 GUI ウィンドウ（ORB-SLAM3 ビューワー）を表示するために必要です。
 
@@ -50,7 +50,7 @@ GUI ウィンドウ（ORB-SLAM3 ビューワー）を表示するために必要
 xhost +local:docker
 ```
 
-### 3. NVIDIA GPU 対応イメージのビルド
+### 3.3. NVIDIA GPU 対応イメージのビルド
 
 Dockerfile の `nvidia_gpu` ステージを使ってイメージをビルドします。
 
@@ -71,7 +71,7 @@ docker images | grep orb-slam3-humble-nvidia
 # orb-slam3-humble-nvidia   22.04   <IMAGE_ID>   ...
 ```
 
-### 4. NVIDIA GPU 対応コンテナの起動
+### 3.4. NVIDIA GPU 対応コンテナの起動
 
 ```bash
 docker compose up orb_slam3_22_humble_nvidia
@@ -84,7 +84,7 @@ docker ps
 # CONTAINER ID を記録しておく（以降 <CONTAINER_ID> と記載）
 ```
 
-### 4. ORB-SLAM3 本体のビルド（FastTrack）
+### 3.4. ORB-SLAM3 本体のビルド（FastTrack）
 
 コンテナ内で CUDA カーネルを含む ORB-SLAM3 をビルドします。
 
@@ -98,7 +98,7 @@ docker exec -it <CONTAINER_ID> bash -c "
 
 > **注意**: ビルドには数分〜数十分かかります。GPU CUDA カーネル（`fast.cu`, `descriptor.cu` 等）がコンパイルされます。
 
-### 5. ROS2 ワークスペースのビルド（CUDA 有効）
+### 3.5. ROS2 ワークスペースのビルド（CUDA 有効）
 
 ```bash
 docker exec -it <CONTAINER_ID> bash -c "
@@ -118,7 +118,7 @@ Summary: 3 packages finished [...]
   slam_msgs
 ```
 
-### 6. カメラドライバのインストール
+### 3.6. カメラドライバのインストール
 
 ```bash
 docker exec -it <CONTAINER_ID> bash -c "
@@ -127,7 +127,7 @@ docker exec -it <CONTAINER_ID> bash -c "
 "
 ```
 
-### 7. カメラキャリブレーション
+### 3.7. カメラキャリブレーション
 
 https://markhedleyjones.com/projects/calibration-checkerboard-collection からチェッカーボードを用意し、`camera_calibration` ツールでキャリブレーションを実施します。  
 
@@ -154,11 +154,15 @@ docker exec -it <CONTAINER_ID> bash -c "
 
 キャリブレーション完了後、取得したパラメータを記録します。
 
-### 8. ORB-SLAM3 キャリブレーションファイルの作成
+### 3.8. ORB-SLAM3 キャリブレーションファイルの作成
 
-#### 8.1 BOMなしでYAMLファイルを作成
+#### 3.8.1 BOMなしでYAMLファイルを作成
 
-**重要**: VSCode などのエディタで作成すると UTF-8 BOM が付く場合があり、OpenCV YAMLパーサーが拒否します。コンテナ内で `printf` コマンドを使って作成してください。
+**重要**: VSCode などのエディタで作成すると UTF-8 BOM が付く場合があり、OpenCV YAMLパーサーが拒否します。  
+コンテナ内で `printf` コマンドを使って作成してください。
+
+以下は Logicool・C270カメラのキャリブレーションパラメータが含まれた
+`orb_slam3_ros2_wrapper/params/orb_slam3_params/c270_mono.yaml`の作成コマンドです。
 
 ```bash
 docker exec <CONTAINER_ID> bash -c "printf '%s\n' \
@@ -204,7 +208,7 @@ docker exec <CONTAINER_ID> bash -c "printf '%s\n' \
 
 > fx, fy, cx, cy, k1, k2, p1, p2 の値はキャリブレーション結果で置き換えてください。
 
-#### 8.2 BOMを確認
+#### 3.8.2 BOMを確認
 
 ```bash
 docker exec <CONTAINER_ID> bash -c "
@@ -214,7 +218,7 @@ docker exec <CONTAINER_ID> bash -c "
 # "ef bb bf" から始まる場合はBOMが残っているので再作成が必要
 ```
 
-### 9. ROS2 パラメータファイルの作成
+### 3.9. ROS2 パラメータファイルの作成
 
 ホスト側（またはコンテナ内）でファイルを作成します。
 
@@ -241,7 +245,7 @@ ORB_SLAM3_MONO_ROS2:
     do_loop_closing: true
 ```
 
-### 10. シンボリックリンクの作成
+### 3.10. シンボリックリンクの作成
 
 `--symlink-install` でビルドしても、ビルド後に追加したファイルは自動リンクされません。手動で作成します。
 
@@ -261,9 +265,9 @@ docker exec <CONTAINER_ID> bash -c "
 
 ---
 
-## SLAM実行方法
+## 4. SLAM実行方法
 
-### 1. カメラノードの起動
+### 4.1. カメラノードの起動
 
 ホストPCに接続されたカメラ映像をROS2ノードでPublishします
 
@@ -281,7 +285,7 @@ docker exec -d <CONTAINER_ID> bash -c "
 
 > `use_sensor_data_qos:=true` により、ORB-SLAM3 サブスクライバー（BEST_EFFORT）との QoS を合わせます。
 
-### 2. ORB-SLAM3 の起動
+### 4.2. ORB-SLAM3 の起動
 
 カメラの特性に合わせたパラメータを読み込んでSLAMを実行します
 
@@ -298,9 +302,9 @@ docker exec -it <CONTAINER_ID> bash -c "
 
 ---
 
-## 動作確認
+## 5. 動作確認
 
-### 正常起動時のログ例
+### 5.1. 正常起動時のログ例
 
 ```txt
 [mono-2] First KF:98; Map init KF:98
@@ -308,7 +312,7 @@ docker exec -it <CONTAINER_ID> bash -c "
 [mono-2] Current ORB-SLAM3 tracking frequency: 25.0022 frames / sec
 ```
 
-### ビューワーの状態
+### 5.2. Current Frame の状態
 
 | 表示 | 状態 |
 | ---- | ---- |
@@ -316,7 +320,7 @@ docker exec -it <CONTAINER_ID> bash -c "
 | `TRYING TO INITIALIZE` | 特徴点マッチング中 |
 | 点群表示 | 初期化成功・トラッキング中 |
 
-### ORB-SLAM3 の Map Viewer（Pangolin GUI）のチェックボックス
+### 5.3. Map Viewer（Pangolin GUI）のチェックボックス
 
 | チェックボックス | 機能 |
 | ---------------- | ---- |
@@ -327,7 +331,7 @@ docker exec -it <CONTAINER_ID> bash -c "
 | Show Inertial Graph | IMU慣性グラフの表示/非表示。<BR>単眼SLAMのみの場合は無効 |
 | Localization Mode | **重要**: ONにするとマッピングを停止し、既存マップへのローカライゼーションのみ行う。<BR>メモリ増加を抑えたい場合に有効 |
 
-### 安定させるコツ
+### 5.4. 安定させるコツ
 
 - カメラを**ゆっくり**動かす（急激な動作でトラッキングロストが発生）
 - テクスチャの豊富な場所（キーボード、本棚など）を向ける
@@ -335,17 +339,18 @@ docker exec -it <CONTAINER_ID> bash -c "
 
 ---
 
-## トラブルシューティング
+## 6. トラブルシューティング
 
-### YAML パースエラー（BOM問題）
+### 6.1. YAML パースエラー（BOM問題）
 
 ```txt
 Premature end of file while trying to read value.
 ```
 
-→ YAMLファイルの先頭に UTF-8 BOM（`ef bb bf`）が含まれています。手順8.1の`printf`コマンドでファイルを再作成してください。
+→ YAMLファイルの先頭に UTF-8 BOM（`ef bb bf`）が含まれています。  
+手順8.1の`printf`コマンドでファイルを再作成してください。
 
-### `WAITING FOR IMAGES` のまま動かない
+### 6.2. `WAITING FOR IMAGES` のまま動かない
 
 1. カメラノードが起動しているか確認:
 
@@ -361,7 +366,7 @@ Premature end of file while trying to read value.
 
 3. カメラノードを `use_sensor_data_qos:=true` で起動する（手順11参照）
 
-### シンボリックリンクが見つからない
+### 6.3. シンボリックリンクが見つからない
 
 ```bash
 docker exec <CONTAINER_ID> bash -c "
@@ -371,13 +376,15 @@ docker exec <CONTAINER_ID> bash -c "
 
 c270_mono.yaml が存在しない場合は手順10を再実行してください。
 
-### Tracking LOST が頻発する
+### 6.4. Tracking LOST が頻発する
 
-単眼SLAMの特性上、急激な動きや特徴点の少ない環境では発生します。`Relocalized!!` が表示されれば自動復帰します。頻発する場合はキャリブレーション精度を確認してください。
+単眼SLAMの特性上、急激な動きや特徴点の少ない環境では発生します。  
+`Relocalized!!` が表示されれば自動復帰します。  
+頻発する場合はキャリブレーション精度を確認してください。
 
 ---
 
-## パフォーマンス参考値
+## 7. パフォーマンス参考値
 
 | 項目 | 値 |
 | ---- | -- |
@@ -387,10 +394,10 @@ c270_mono.yaml が存在しない場合は手順10を再実行してください
 
 ---
 
-## 関連ファイル
+## 8. 関連ファイル
 
 | ファイル | 用途 |
 | -------- | ---- |
-| `orb_slam3_ros2_wrapper/params/orb_slam3_params/c270_mono.yaml` | カメラキャリブレーション・ORB設定 |
+| `orb_slam3_ros2_wrapper/params/orb_slam3_params/c270_mono.yaml` | Logicool・C270カメラキャリブレーション・ORB設定 |
 | `orb_slam3_ros2_wrapper/params/ros_params/c270-mono-ros-params.yaml` | ROS2トピック・フレーム設定 |
 | `docker-compose.yml` | コンテナ定義（NVIDIAランタイム設定） |

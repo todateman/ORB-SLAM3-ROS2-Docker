@@ -44,6 +44,8 @@ services:
       #Time
       - /etc/timezone:/etc/timezone:rw
       - /etc/localtime:/etc/localtime:rw
+      #X11 GUI
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
       #ros-workspaces
       - ./container_root/:/root/
       - ./ros_env_vars.sh:/root/ros_env_vars.sh
